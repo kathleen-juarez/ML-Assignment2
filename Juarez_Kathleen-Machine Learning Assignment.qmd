@@ -29,6 +29,8 @@ library(skimr)
 library(dplyr)
 library(ggplot2)
 library(magrittr)
+library(broom)
+library(tidyverse)
 ```
 
 # 2. Data
@@ -88,5 +90,92 @@ ggplot(data = Boston, aes(x=lstat, y=medv)) +
 ![](ChiHousingimage.png)
 
 ```{r}
+# Chicago Housing Data
+library(readr)
+
+chicago <- read_csv("chicago housingdata.csv")
+
+head(chicago)
+```
+
+```{r}
+ggplot(chicago,aes(x=BEDROOM, y=Ln_Price)) +
+  geom_point () + 
+  geom_smooth(method="gam")
+```
+
+## 2.3 Heart data
+
+Description:
+
+-   Age
+
+-   Sex (1= male, 0= female)
+
+-   ChestPain (1= typical angina, 2= atypical angina, 3= non-anginal pain, 4= asymptotic) RestBP
+
+-   Chol
+
+-   Fbs (fasting blood sugar)
+
+-   RestECG (0 = normal, 1 = having ST-T wave abnormally, 2= left ventricular) CHD (coronary heart disease: 1= yes, 0= no)
+
+```{r}
+library(haven)
+heart <- 
+  read_sav("Heart Data.sav")
+
+View(heart)
+```
+
+# 3. Multiple Linear and Logistic Regression
+
+## 3.1 Log-Level Model with Boston Data
+
+```{r}
+# Boston Data
+library(broom)
+
+lm(log(medv) ~ ., data=Boston) %>% 
+  tidy() %>% 
+  mutate(across(where(is.numeric), ~ round(., 4)))
 
 ```
+
+::: callout-note
+## Tip
+
+Log Linear model
+
+-   log(y) = β₀ + β₁x₁ + β₂x₂ + … + ε
+
+    -   A **one-unit increase in `xᵢ`** is associated with an **approximately (100 × βᵢ)% change in `y`**, **holding other variables constant**.
+:::
+
+## 3.2 Log-Log Model with Chicago Data
+
+```{r}
+# Chicago Housing Data
+lm(Ln_Price ~ ., data=chicago) %>% 
+  tidy() %>% 
+   mutate(across(where(is.numeric), ~ round(., 4)))
+```
+
+::: callout-note
+## Log Log Model
+
+Log-Log model
+
+-   log(y) = β₀ + β₁log(x₁) + β₂x₂ + … + ε
+
+    -   A **1 % increase in `x1`** is associated with an **approximately β1% change in `y`**, **holding other variables constant**.
+:::
+
+## 3.3 Functional Forms Summary Table
+
+| **Model Type** | **Formula** | **Interpretation** |
+|----|----|----|
+| **Log-Linear** | `log(y) ~ x` | A 1-unit increase in `x` → \~**100 × β%** change in `y` |
+| **Log-Log** | `log(y) ~ log(x)` | A 1% increase in `x` → \~**β%** change in `y` (**elasticity**) |
+| **Linear-Log** | `y ~ log(x)` | A 1% increase in `x` → \~**β ÷ 100** unit change in `y` |
+| **Linear** | `y ~ x` | A 1-unit increase in `x` → **β** unit change in `y` |
