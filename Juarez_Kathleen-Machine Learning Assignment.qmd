@@ -174,8 +174,77 @@ Log-Log model
 ## 3.3 Functional Forms Summary Table
 
 | **Model Type** | **Formula** | **Interpretation** |
-|----|----|----|
+|------------------------|------------------------|------------------------|
 | **Log-Linear** | `log(y) ~ x` | A 1-unit increase in `x` → \~**100 × β%** change in `y` |
 | **Log-Log** | `log(y) ~ log(x)` | A 1% increase in `x` → \~**β%** change in `y` (**elasticity**) |
 | **Linear-Log** | `y ~ log(x)` | A 1% increase in `x` → \~**β ÷ 100** unit change in `y` |
 | **Linear** | `y ~ x` | A 1-unit increase in `x` → **β** unit change in `y` |
+
+### 3.3.1 Caveat for log-level model
+
+log(y) = 0.5·x + …
+
+-   In the Log-level model, it is only accurate when β is small (say \|β\| \< 0.1). For larger coefficients, the **exponential form** gives the exact percentage change.
+
+When the coefficient (like **0.5**) is **large**, the usual shortcut for interpreting the result isn't very accurate.
+
+#### **1. Approximate method** (only works well when β is small — like \< 0.1):
+
+-   Rule of thumb: Multiply the coefficient by 100.\
+
+    → So: `0.5 × 100 = 50%`\
+
+    → **1 unit increase in x = \~50% increase in y**
+
+#### **2. Exact method** (always accurate):
+
+-   Use the formula: (exp(β)−1) x 100\
+
+    → So: (exp(.5) x 100≈64.87\
+
+    → **1 unit increase in x = \~64.9% increase in y**
+
+If your coefficient is **small** (like 0.05), the **approximate method** (β × 100) is fine.
+
+If your coefficient is **large** (like 0.5 or more), use the **exact method** with `exp(β) - 1`.\
+
+```{r}
+(exp(0.1) - 1) * 100
+(exp(0.5) - 1) * 100
+```
+
+## 3.4 Logistic model with Heart Data
+
+```{r}
+# Running binary logistic model for heart
+m3 <- 
+  glm(CHD ~ ., family = binomial(link="logit"), data=heart) #CHD (coronary heart disease: 1= yes, 0= no)
+tidy(m3) %>% 
+   mutate(across(where(is.numeric), ~ round(., 4)))
+```
+
+::: {.callout-note collapse="true" title="code explanation"}
+### code explanation
+
+```         
+glm(): This fits a generalized linear model.
+
+CHD ~ .: You're modeling CHD (coronary heart disease) as the outcome, using all other variables in the heart dataset as predictors.
+
+family = binomial(link = "logit"): This tells R to run a logistic regression (used when the outcome is binary: 0 or 1).
+
+    Here, CHD = 1 means the person has heart disease.
+
+    CHD = 0 means they don't.
+
+Result: This model estimates how each predictor affects the log-odds of having coronary heart disease.
+```
+:::
+
+```{r}
+# You can calculate OR and their confidence intervals for interpretation
+OR_table <- 
+  cbind(OR = coef(m3), confint(m3)) %>%
+  exp() %>%
+  round(3)
+```
