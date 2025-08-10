@@ -16,6 +16,7 @@ editor: visual
 execute: 
   freeze: auto
   warning: false
+  error: true 
 editor_options: 
   chunk_output_type: inline
 ---
@@ -32,6 +33,8 @@ editor_options:
 #install.packages("skimr")
 #install.packages("tidyverse")
 #install.packages("mgcv")
+#install.packages("glmnet")
+library(glmnet)
 library(mgcv)
 library(caret)
 library(earth)
@@ -186,7 +189,7 @@ Log-Log model
 ## 3.3 Functional Forms Summary Table
 
 | **Model Type** | **Formula** | **Interpretation** |
-|----|----|----|
+|------------------------|------------------------|------------------------|
 | **Log-Linear** | `log(y) ~ x` | A 1-unit increase in `x` → \~**100 × β%** change in `y` |
 | **Log-Log** | `log(y) ~ log(x)` | A 1% increase in `x` → \~**β%** change in `y` (**elasticity**) |
 | **Linear-Log** | `y ~ log(x)` | A 1% increase in `x` → \~**β ÷ 100** unit change in `y` |
@@ -543,4 +546,251 @@ BIC(gam2)
 
 ```{r}
 BIC(gam3)
+```
+
+# 6. Regularization
+
+## 6.1 Lasso & Ridge using glmnet with crime data
+
+```{r}
+library(readr)
+data <- read_csv("crime.csv")
+View(crime_data)
+```
+
+```{r}
+skim(data)
+```
+
+```{r}
+
+#separate x and y
+xdata <- 
+  model.matrix(ViolentCrimesPerPop ~ ., crime_data)[,-1] # model.matrix creates a design (or model) matrix, e.g., by expanding factors to a set of dummy variables (depending on the contrasts) and expanding interactions similarly. [,-1]: take out y variable
+
+dim(xdata)
+
+head(xdata)
+
+names(xdata)
+```
+
+```{r}
+ydata <-  data$ViolentCrimesPerPop
+
+# Random split of data
+set.seed(340)
+itrain <- sample(1:nrow(data), nrow(data)*0.5)
+length(itrain)
+```
+
+```{r}
+
+
+itest <- (-itrain)
+
+
+#separate into training and test data
+xtrain = xdata[itrain,]
+ytrain = ydata[itrain]
+
+xtest = xdata[itest,] 
+ytest = ydata[itest]
+```
+
+### 6.1.1 Fitting Lasso, alpha = 1 Crime Data
+
+-   Lasso regularization penalizes the size of coefficients, and the penalty strength is controlled by λ.
+
+-   High λ = stronger shrinkage → simpler model (more coefficients shrunk to 0).
+
+-   `cv.glmnet(...)` runs **Lasso regression** (`alpha = 1`) with 10-fold cross-validation.
+
+-   `type.measure = "mse"`: Uses **Mean Squared Error** as the evaluation metric.
+
+-   `standardize = TRUE` by default: Each predictor is standardized to mean 0 and sd 1 before fitting
+
+```{r}
+library(glmnet)
+# Step 1: Create a grid of λ (lambda) values
+# By default glmnet uses lambda = 10^10 =10,000,000,000  and 10^-2 = 0.01
+# present plots in log scale 
+grid <- 10^seq(5,-5, length=1000) # grid, 
+
+# Step 2: Run 10-fold cross-validation to find optimal λ
+set.seed(123)
+cv.lasso <- cv.glmnet(xtrain, ytrain, alpha=1, lambda=grid, 
+                     nfolds=10, type.measure = "mse")
+# default setting is standardize = True
+
+# Step 3: Plot the cross-validation results
+par(mfrow=c(1,1))
+plot(cv.lasso)
+```
+
+```{r}
+cv.lasso
+
+
+# Step 4: Extract optimal λ values
+lambda1 <- cv.lasso$lambda.min # Best model (smallest MSE)
+lambda2 <- cv.lasso$lambda.1se # Simpler model (within 1 SE of best)
+lambda1
+
+lambda2
+```
+
+```{r}
+# Step 5: Fit models at both λ values
+fit.min <-  glmnet(xtrain, ytrain, alpha=1, lambda = lambda1)
+coef(fit.min)
+
+fit.1se <- 
+  glmnet(xtrain, ytrain, alpha=1, lambda = lambda2)
+coef(fit.1se)
+```
+
+```{r}
+# Step 6: Predict on test data and calculate MSE
+lasso.yhat <-  predict(fit.min, s=lambda1, newx=xtest)
+mean((lasso.yhat - ytest)^2)
+
+lasso.yhat <-  predict(fit.1se, s=lambda2, newx=xtest)
+mean((lasso.yhat - ytest)^2)
+```
+
+```{r}
+# Step 7: converting sparse matrix to matrix and to data frame
+coef(fit.min) %>% as.matrix() %>% as.data.frame() %>%
+  filter(s0 !=0)
+
+coef(fit.1se) %>% as.matrix() %>% as.data.frame() %>%
+  filter(s0 !=0)
+```
+
+```{r}
+# Step 8: Fit Lasso without cross-validation
+cv.lasso_min <- glmnet(x=xtrain, y=ytrain, alpha=1)
+
+plot(cv.lasso_min, xvar = "lambda")
+abline(v = -log(cv.lasso$lambda.min), col = "red", lty = "dashed")
+abline(v = -log(cv.lasso$lambda.1se), col = "red", lty = "dashed")
+```
+
+::: callout-note
+## note
+
+| Function         | Cross-validation? | Purpose                |
+|------------------|-------------------|------------------------|
+|                  
+ `glmnet(...)`     | ❌ No             | Lasso path             |
+| `cv.glmnet(...)` | ✅ Yes            | Finds optimal λ via CV |
+:::
+
+### 6.1.2 
+
+```{r}
+# find lamda via cross validiation.
+
+grid = 10^seq(5,-5, length=1000) # grid, 
+set.seed(123)
+cv.ridge = cv.glmnet(xtrain, ytrain, alpha=0, lambda=grid, 
+                     nfolds=10, type.measure = "mse")
+# alpha = 0  Ridge; default setting is standardize = True
+
+plot(cv.ridge)
+```
+
+```{r}
+cv.ridge
+lambda1 <-  cv.ridge$lambda.min
+lambda2 <- cv.ridge$lambda.1se
+lambda1
+lambda2
+fit.min <-  glmnet(xtrain, ytrain, alpha=0, lambda=lambda1)
+coef(fit.min)
+```
+
+## 6.2 Regularization using AmesHosing Data: Data Preparation (Your Turn)
+
+```{r}
+# AmesHousing::make_ames() - processed version of the data
+data("ames_raw")
+head(ames_raw)
+```
+
+```{r}
+set.seed(123)
+ames_split <- initial_split(AmesHousing::make_ames(), prop = .7, strata = "Sale_Price")
+ames_train <- training(ames_split)
+ames_test  <- testing(ames_split)
+
+
+lm(Sale_Price ~ Gr_Liv_Area + TotRms_AbvGrd, data = ames_train) # show multi colinearity 
+```
+
+```{r}
+# Create training and testing feature model matrices and response vectors.
+# we use model.matrix(...)[, -1] to discard the intercept
+
+ames_train_x <- model.matrix(Sale_Price ~ ., ames_train)[, -1]
+ames_train_y <- log(ames_train$Sale_Price)
+
+ames_test_x <- model.matrix(Sale_Price ~ ., ames_test)[, -1]
+ames_test_y <- log(ames_test$Sale_Price)
+
+# (ames_train_x)  What is the dimension of of your feature matrix? 
+dim(ames_train_x)
+```
+
+## 6.3  Regularization - classification, Heart Data, Preparation
+
+```{r}
+# Classification model
+heart
+#separate x and y
+xdata <-  model.matrix(CHD ~ ., data)[,-1]
+ydata <-  as.factor(data$CHD)
+
+# Random split of data
+set.seed(340)
+itrain <- sample(1:nrow(data), nrow(data)*0.6)
+itest <- (-itrain)
+
+
+#separate into training and test data
+xtrain = xdata[itrain,]
+ytrain = ydata[itrain]
+
+xtest = xdata[itest,] 
+ytest = ydata[itest]
+
+```
+
+```{r}
+grid = 10^seq(5,-5, length=500) # grid, 
+set.seed(123)
+cv.lasso = cv.glmnet(xtrain, as.factor(ytrain), alpha=1, lambda=grid, 
+                     nfolds=10, family = "binomial", type.measure = "class")
+# type.measure = "response" gives the probabilities
+# type.measure = "class" provide 0 and 1 based on predicted probabilities
+
+
+plot(cv.lasso)
+```
+
+```{r}
+# Plot
+plot(fit.heart, xvar = "lambda", label = TRUE)
+abline(v = -log(cv.lasso$lambda.min), col = "red", lty = "dashed")
+abline(v = -log(cv.lasso$lambda.1se), col = "red", lty = "dashed")
+```
+
+```{r}
+lasso.yhat <-  predict(fit.heart, s=lambda2, newx=xtest, type = "class")
+
+ab <- cbind(lasso.yhat,as.data.frame(ytest))
+table(ab$ytest, ab$`s=0.04648734`)
+
+mean(ab$ytest == ab$`s=0.04648734`) #actual == predicted
 ```
