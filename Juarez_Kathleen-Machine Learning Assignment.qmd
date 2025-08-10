@@ -31,6 +31,8 @@ editor_options:
 #install.packages("leaps")
 #install.packages("skimr")
 #install.packages("tidyverse")
+#install.packages("mgcv")
+library(mgcv)
 library(caret)
 library(earth)
 library(skimr)
@@ -184,7 +186,7 @@ Log-Log model
 ## 3.3 Functional Forms Summary Table
 
 | **Model Type** | **Formula** | **Interpretation** |
-|------------------------|------------------------|------------------------|
+|----|----|----|
 | **Log-Linear** | `log(y) ~ x` | A 1-unit increase in `x` → \~**100 × β%** change in `y` |
 | **Log-Log** | `log(y) ~ log(x)` | A 1% increase in `x` → \~**β%** change in `y` (**elasticity**) |
 | **Linear-Log** | `y ~ log(x)` | A 1% increase in `x` → \~**β ÷ 100** unit change in `y` |
@@ -451,9 +453,94 @@ plotmo(mars.2)
 
 # You can quickly check the relationship: whether linear or non-linear
 
-gam.1 = gam(log(medv)~ s(crim) + s(rm) + s(dis) + s(ptratio) + s(lstat), data=Boston) # s(): Defining smooths in GAM formulae: polynominal
+library(mgcv)
+
+gam.1 <-
+  gam(log(medv)~ s(crim) + s(rm) + s(dis) + s(ptratio) + s(lstat), data=Boston) # s(): Defining smooths in GAM formulae: polynominal
 
 par(mfrow=c(2,3))
 plot(gam.1, se=TRUE, col="blue")
+
 summary(gam.1)
+```
+
+::: callout-note
+## summary
+
+-   Tests if the smoothingng non-linear effect adds contributions to the model.
+
+```         
+Anova for Parametric Effects
+            Df  Sum Sq Mean Sq F value    Pr(>F)    
+s(crim)      1 25.8737 25.8737 798.011 < 2.2e-16 ***
+s(rm)        1 20.9302 20.9302 645.540 < 2.2e-16 ***
+s(dis)       1  0.5191  0.5191  16.011 7.283e-05 ***
+s(ptratio)   1  1.8794  1.8794  57.967 1.404e-13 ***
+s(lstat)     1 11.3096 11.3096 348.817 < 2.2e-16 ***
+Residuals  485 15.7250  0.0324                      
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+```
+
+-   Tests if the non-linear effect is significant
+
+```         
+Anova for Nonparametric Effects
+            Npar Df  Npar F     Pr(F)    
+(Intercept)                              
+s(crim)           3  4.1278  0.006603 ** 
+s(rm)             3 27.9782 < 2.2e-16 ***
+s(dis)            3  2.7640  0.041479 *  
+s(ptratio)        3  2.5208  0.057254 .  
+s(lstat)          3  9.4583 4.397e-06 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+```
+:::
+
+## 5.2 GAM; Classification Model (Your turn):
+
+```{r}
+library(haven)
+heart <- read_sav("Heart Data.sav")
+
+```
+
+```{r}
+library(mgcv)
+
+gam2 <- 
+  mgcv::gam(I(CHD)~ Age + Sex + ChestPain + RestBP + Chol + RestECG, family = binomial, data=heart)
+
+summary(gam2)
+
+```
+
+```{r}
+par(mfrow=c(2,3))
+plot(gam2, se=TRUE, col="blue")
+```
+
+```{r}
+gam3 <-
+  gam(I(CHD)~ s(Age) + Sex + ChestPain + s(RestBP) + s(Chol) + RestECG, family = binomial, data=heart)
+#summary(gam3)
+```
+
+```{r}
+par(mfrow=c(2,3))
+plot(gam3, se=TRUE, col="blue")
+```
+
+```{r}
+anova(gam2, gam3, test ="Chisq")
+
+```
+
+```{r}
+BIC(gam2)
+```
+
+```{r}
+BIC(gam3)
 ```
