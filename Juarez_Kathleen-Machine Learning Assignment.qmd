@@ -25,12 +25,31 @@ editor_options:
 ```{r}
 #install.packages("AmesHousing")
 #install.packages("MASS")
+#install.packages("earth")
+#install.packages("caret")
+library(caret)
+library(earth)
 library(skimr)
 library(dplyr)
 library(ggplot2)
 library(magrittr)
 library(broom)
 library(tidyverse)
+library(MASS)   # for the Boston dataset
+library(leaps)
+```
+
+```{r}
+#remove.packages("earth")
+# (Optional) also remove related helpers if installed:
+# remove.packages(c("plotmo","plotrix"))
+
+# Prefer exact-match binary for your R version:
+#install.packages("earth")  # will fetch the correct binary for 4.4.x
+
+install.packages("earth", type = "source", Ncpus = parallel::detectCores())
+
+library(earth)
 ```
 
 # 2. Data
@@ -244,7 +263,149 @@ Result: This model estimates how each predictor affects the log-odds of having c
 ```{r}
 # You can calculate OR and their confidence intervals for interpretation
 OR_table <- 
-  cbind(OR = coef(m3), confint(m3)) %>%
+ cbind(OR = coef(m3), confint(m3)) %>%
   exp() %>%
   round(3)
+```
+
+# 3.5 Boston Data
+
+```{r}
+# Boston Housing Data : Best Subsets Regression 
+
+# Load data
+data("Boston")
+
+# Fit best subsets regression
+best.sub.1 <- 
+  regsubsets(log(medv) ~ ., data = Boston, nvmax = 10)
+
+# Show summary
+summary(best.sub.1)
+```
+
+::: {.callout-note collapse="true" title="code explanation"}
+## code explanation
+
+### `regsubsets()`
+
+-   This function is from the **`leaps`** package.
+
+-   It performs **best subsets regression**, which tries **all possible combinations** of predictors to find the **best model** based on a criterion (like adjusted R², BIC, or Cp).
+
+-   It's a tool for **variable selection**.
+
+### `log(medv) ~ .`
+
+-   The **response variable** is `log(medv)` (log of median home value).
+
+-   The `.` means use **all other variables** in the `Boston` dataset as predictors.
+
+`nvmax = 10`
+
+-   This limits the search to models with **up to 10 predictors**
+
+-   Useful for controlling complexity and computation time.
+:::
+
+```{r}
+reg.summary <-
+  summary(best.sub.1)
+
+reg.summary$rsq
+```
+
+```{r}
+par(mfrow=c(1,3)) 
+
+plot(reg.summary$rss, xlab='Number of Variables', ylab='RSS', type='l') 
+# rss = residual sum of squares
+
+plot(reg.summary$adjr2, xlab='Number of Variables', ylab='Adjusted R^2', type='l')
+
+plot(reg.summary$bic, xlab='Number of Variables', ylab='BIC', type='l')
+```
+
+::: callout-note
+## code explanation
+
+```         
+par can be used to set or query graphical parameters. Parameters can be set by specifying them as arguments to par in tag = value form, or by passing them as a list of tagged values
+```
+:::
+
+### 3.5.2 
+
+```{r}
+# Chicago Housing Data : Best Subsets Regression 
+best.sub. <-
+  regsubsets(Ln_Price ~ ., data = chicago, nvmax=10)
+
+summary(best.sub.1)
+```
+
+```{r}
+reg.summary <- 
+  summary(best.sub.1)
+
+reg.summary$rsq
+```
+
+```{r}
+par(mfrow=c(1,3))
+
+plot(reg.summary$rss, xlab='Number of Variables', ylab='RSS', type='l')
+plot(reg.summary$adjr2, xlab='Number of Variables', ylab='Adjusted R^2', type='l')
+plot(reg.summary$bic, xlab='Number of Variables', ylab='BIC', type='l')
+```
+
+# 4. MARS - Multivariate Adaptive Regression Splines:
+
+## 4.1 MARS with Boston Data
+
+```{r}
+# Sample splitting into Train and Test
+
+set.seed(2022)
+index <- sample(1:nrow(Boston), size = floor(0.7*nrow(Boston)), replace = FALSE) 
+train <- Boston[index,]
+test <- Boston[-index,]
+dim(train)
+```
+
+```{r}
+dim(test)
+```
+
+```{r}
+dim(Boston)
+```
+
+```{r}
+x <- train[, -14]
+y <- train[, 14]
+dim(x)
+```
+
+```{r}
+dim(y)
+```
+
+```{r}
+y |> as_tibble() |> dim()
+```
+
+```{r}
+library(caret)
+# Create parameter tuning grid
+parameter_grid <- floor(expand.grid(degree = 1:2, nprune = seq(2:8)))
+
+# Perform cross-validation using caret package
+cv_mars_boston <- train(x=x, y=y,
+                        method ='earth',
+                        metric='RMSE',
+                        trControl = trainControl(method='cv', number = 10),
+                        tuneGrid=parameter_grid)
+
+ggplot(cv_mars_boston)
 ```
