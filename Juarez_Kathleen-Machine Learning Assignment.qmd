@@ -20,13 +20,17 @@ editor_options:
   chunk_output_type: inline
 ---
 
-# 1. Install Packages
+# 1. Install Package
 
 ```{r}
 #install.packages("AmesHousing")
 #install.packages("MASS")
 #install.packages("earth")
 #install.packages("caret")
+#install.packages("broom")
+#install.packages("leaps")
+#install.packages("skimr")
+#install.packages("tidyverse")
 library(caret)
 library(earth)
 library(skimr)
@@ -37,19 +41,6 @@ library(broom)
 library(tidyverse)
 library(MASS)   # for the Boston dataset
 library(leaps)
-```
-
-```{r}
-#remove.packages("earth")
-# (Optional) also remove related helpers if installed:
-# remove.packages(c("plotmo","plotrix"))
-
-# Prefer exact-match binary for your R version:
-#install.packages("earth")  # will fetch the correct binary for 4.4.x
-
-install.packages("earth", type = "source", Ncpus = parallel::detectCores())
-
-library(earth)
 ```
 
 # 2. Data
@@ -334,7 +325,7 @@ par can be used to set or query graphical parameters. Parameters can be set by s
 ```
 :::
 
-### 3.5.2 
+### 3.5.2
 
 ```{r}
 # Chicago Housing Data : Best Subsets Regression 
@@ -408,4 +399,61 @@ cv_mars_boston <- train(x=x, y=y,
                         tuneGrid=parameter_grid)
 
 ggplot(cv_mars_boston)
+```
+
+```{r}
+cv_mars_boston
+```
+
+```{r}
+mars_predict <- 
+  predict(object=cv_mars_boston$finalModel,
+                        newdata = test)
+mars_predict
+```
+
+```{r}
+mean(abs(test$medv - mars_predict))
+```
+
+```{r}
+# Multivariate Adaptive Regression Splines 
+mars.1 <- 
+  earth(medv ~ ., degree=1, nprune = 5, data=Boston) #nprune: maximum no. of terms including intercept.
+
+summary(mars.1)
+```
+
+```{r}
+plotmo(mars.1) # out of 13 variables, only 3 were picked.
+```
+
+```{r}
+mars.2 <-  
+  earth(log(medv) ~ ., degree=1, nprune = 7, data=Boston)
+summary(mars.2)
+```
+
+```{r}
+plotmo(mars.2)
+```
+
+# 5. GAM; Regression Model
+
+-   **`s()`**
+
+    -   `s(variable)` tells `mgcv::gam()` to fit a **smooth function** (usually a spline) for that predictor.
+
+    -   Instead of forcing a straight-line relationship (like in linear regression), it lets the model **learn a smooth curve** that best fits the data.
+
+```{r}
+# Regression Model
+
+# You can quickly check the relationship: whether linear or non-linear
+
+gam.1 = gam(log(medv)~ s(crim) + s(rm) + s(dis) + s(ptratio) + s(lstat), data=Boston) # s(): Defining smooths in GAM formulae: polynominal
+
+par(mfrow=c(2,3))
+plot(gam.1, se=TRUE, col="blue")
+summary(gam.1)
 ```
