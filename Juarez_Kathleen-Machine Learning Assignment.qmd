@@ -143,6 +143,17 @@ heart <-
 View(heart)
 ```
 
+# Question 1
+
+::: callout-note
+## Question 1
+
+According to your professor, there are
+three conditions that must be satisfied if one wants to claim variable A causes variable B.  What are those, and elaborate on them.
+
+ANSWER: To claim Variable A causes Variable B, three things must be true: A and B must be related, A must happen before B, and there must be no other factors explaining the relationship. When these conditions are met, we can say A causes B.
+:::
+
 # 3. Multiple Linear and Logistic Regression
 
 ## 3.1 Log-Level Model with Boston Data
@@ -354,6 +365,30 @@ plot(reg.summary$rss, xlab='Number of Variables', ylab='RSS', type='l')
 plot(reg.summary$adjr2, xlab='Number of Variables', ylab='Adjusted R^2', type='l')
 plot(reg.summary$bic, xlab='Number of Variables', ylab='BIC', type='l')
 ```
+
+# Question 2
+
+::: callout-note
+## Question 2
+
+What is internal validity? Explain why the existence of causality among variables in a study enhances the internal validity of the study
+findings
+
+ANSWER: Internal validity just means a study shows that one thing really causes another, with no outside factors messing things up. When causality is clear, it makes the results more trustworthy because we know the changes are due to the variables we’re studying, not something else.
+
+Which research design is best in general for internal validity? Explain why. 
+
+ANSWER: The best research design for internal validity is an experimental design, especially randomized controlled trials (RCTs). This is because in RCTs, participants are randomly assigned to different groups, which helps prevent bias and control for other factors. This way, researchers can be sure that any changes they see are actually due to the treatment and not something else.
+:::
+
+# Question 3
+
+::: callout-note
+## Question 3
+
+Compare and contrast (1) experimental design and (2) survey design in terms of (1) what they are, (2) internal validity, and (3) external validity. How can you improve external validity for
+experiments?
+:::
 
 # 4. MARS - Multivariate Adaptive Regression Splines:
 
@@ -794,3 +829,168 @@ table(ab$ytest, ab$`s=0.04648734`)
 
 mean(ab$ytest == ab$`s=0.04648734`) #actual == predicted
 ```
+
+# Question 4: Regularization
+
+::: callout-note
+## Question 4. 1
+
+What is regularization? Why is it better than the Ordinary Least Squares method?
+
+ANSWER:Regularization is a way to keep a regression model from getting too complicated by adding a penalty for large coefficients. It’s better than OLS because OLS can lead to overfitting, where the model is too closely fitted to the training data and doesn’t work well on new data. Regularization helps make the model simpler and more reliable, focusing on the most important predictors.
+:::
+
+::: callout-note
+## Question 4.2
+
+Compare and contrast Ridge and Lasso regressions. What are the
+similarities and differences? Under what circumstances does each
+regularization work better?
+
+ANSWER: Ridge and Lasso are both ways to prevent overfitting by adding penalties to the model, but they do it differently. **Ridge** shrinks all coefficients, keeping all variables in the model but making them less important. **Lasso**, on the other hand, can shrink some coefficients to zero, effectively removing less important variables. **Ridge** is better when you have many relevant predictors and don’t want to eliminate any, while **Lasso** is great when you think only a few predictors matter and want to simplify the model.
+:::
+
+::: callout-note
+## Question 4.3
+
+What is cross-validation? Explain the logic behind it.
+
+ANSWER: Cross-validation is a method to test how well a model will perform by splitting the data into parts. In k-fold cross-validation, the data is divided into k sections. The model is trained on k-1 of those sections and tested on the last one, and this repeats for each section. The idea is to get a better idea of how the model will perform on new data, helping to avoid overfitting and giving a more reliable performance measure.
+:::
+
+::: callout-note
+## Question 4.4
+
+How is it related to the regularization, such as Ridge and Lasso regressions? 
+
+ANSWER: Cross-validation helps choose the best regularization strength (like lambda) for Ridge and Lasso by testing different values on different data splits. It makes sure the model isn’t overfitting or underfitting, finding the right balance for better performance on new data.
+:::
+
+# Task 1
+
+Run the linear model for the **Chicago Housing Data,** where ***Ln_Price*** is regressed on all other variables in the data. 
+
+ANSWER: The results show that distressed sales (DSALE) are associated with substantially lower home prices, with distressed properties selling for about 33% less than comparable non-distressed homes, holding all other factors constant. In contrast, home size, measured by the natural log of square footage (Ln_SQFT), has a positive and economically meaningful effect: a 1% increase in square footage is linked to roughly a 0.47% increase in price, all else equal.
+
+```{r}
+lm_chicago <- lm(Ln_Price ~ ., data = chicago)
+
+# View a summary
+summary(lm_chicago)
+```
+
+# Task 3
+
+Take a note while you read the **Islam et al. (2022) JBR** article. Organize it well inside the same QMD file. Provide a full citation of the article in the QMF file such that when you render it, the full citation automatically appears at the bottom of the report.
+
+Islam, T., Meade, N., Carson, R. T., Louviere, J. J., & Wang, J. (2022). The usefulness of socio-demographic variables in predicting purchase decisions: Evidence from machine learning procedures. *Journal of Business Research*, 151, 324–338. <https://doi.org/10.1016/j.jbusres.2022.07.004>
+
+## **Purpose of the Study**
+
+-   Reassess the predictive power of socio-demographic variables in purchase decisions.
+
+-   Compare traditional logistic regression to machine learning procedures (MLPs).
+
+-   Investigate:
+
+    1.  Predictive power improvements via MLPs.
+
+    2.  Nonlinear patterns & interactions in socio-demographic effects.
+
+    3.  Whether these relationships have causal significance (propensity score approach).
+
+## **Background & Rationale**
+
+-   Conventional wisdom: demographics have marginal predictive value, especially when past purchase data are available.
+
+-   Arguments for revisiting:
+
+    1.  For new products/new market entrants, past purchase data may be unavailable.
+
+    2.  Demographic data is now cheaper, richer, and more widely available (e.g., online behavioral proxies).
+
+    3.  Past studies relied on linear models, ignoring nonlinearities and interactions.
+
+-   Modern ML can detect complex patterns without rigid assumptions and can avoid overfitting.
+
+## **Context**
+
+-   Socio-demographics have been used to predict food purchases, fast-food choices, organic food purchases, e-commerce, hedonic consumption, concert attendance, renewable energy adoption, etc.
+
+-   Past findings are mixed — predictive power varies by product category/context.
+
+-   Many earlier studies overlooked the low acquisition cost and wide availability of demographic data.
+
+-   Most low-performance findings came from traditional regression-based models that miss nonlinearities and interactions.
+
+## **Machine Learning Procedures (MLPs) Tested**
+
+**Baseline:** Binary logistic regression.
+
+**MLPs:**
+
+1.  **Random Forests** – Ensemble of decision trees, good at capturing nonlinearities and interactions.
+
+2.  **Gradient Boosting (Extreme Gradient Boosting)** – Sequentially improves weak learners.
+
+3.  **Support Vector Machine (SVM)** – Optimal separating hyperplanes, can use nonlinear kernels.
+
+4.  **K-Nearest Neighbor (k-NN)** – Classifies based on proximity to neighbors.
+
+5.  **Neural Network (Single Hidden Layer)** – Flexible nonlinear mapping.
+
+6.  **Genetic Algorithm (GA)** – Evolutionary search optimizing classification accuracy.
+
+7.  **Particle Swarm Optimization (PSO)** – Swarm-based search/classification.
+
+## **Data**
+
+-   **Source:** IRI panel data.
+
+-   **Sample:** \>7,000 panelists.
+
+-   **Products:** Baby formula, single-serving coffee, snacks, detergent powder, toothpaste, canned tuna.
+
+-   Buyers vs. non-buyers sampled.
+
+-   Variables: Standard socio-demographics (household size, race, ethnicity, income, education, presence of children, age, affluence, region).
+
+## **Method**
+
+-   **Prediction Task:** Buy vs. No-buy classification.
+
+-   **Data Split:** 70% training, 30% testing.
+
+-   **Evaluation Metric:** Sensitivity (true positive rate) — preferred over accuracy due to class imbalance.
+
+-   **Hyperparameter tuning:** Cross-validation & grid search.
+
+-   **Causal Inference:** Propensity score weighting to adjust for confounding (boosted tree estimation).
+
+## **Key Findings**
+
+### 1. Predictive Performance
+
+-   All MLPs outperformed logistic regression.
+
+-   Out-of-sample sensitivity improvement: **+20% to +33%** vs. logistic regression.
+
+-   **Top performers:** Random Forests, SVM, Gradient Boosting.
+
+-   **k-NN** lowest among MLPs but still \> logistic regression.
+
+-   Neural network showed overfitting due to relatively small sample size.
+
+### 2. Nonlinear Patterns
+
+-   MLPs uncovered nonlinearities (e.g., inverted U-shaped income effects).
+
+-   Example: Baby formula purchase probability rose with income, then dropped sharply at highest income level — not detected by logistic regression.
+
+-   Interactions between variables (e.g., presence of child × age × income) were important.
+
+### 3. Causality
+
+-   Propensity score analysis reduced confounding and enabled more credible causal inference.
+
+-   Many nonlinear relationships identified by MLPs remained significant after causal adjustment.
