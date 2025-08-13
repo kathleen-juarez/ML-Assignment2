@@ -1,5 +1,5 @@
 ---
-title: "ML"
+title: "Juarez-Kathleen - ML Assignment"
 format:
   html:
     self-contained: true
